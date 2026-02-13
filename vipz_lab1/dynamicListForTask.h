@@ -1,5 +1,6 @@
-#pragma once 
-#include <stdio.h> 
+#pragma once
+#include <stdio.h>
+
 typedef struct Book {
 	char author[100];
 	char book_title[100];
@@ -7,16 +8,19 @@ typedef struct Book {
 	int pages;
 	int price;
 	struct Book* next;
-}Book;
-Book* start;
-void addElementToList(char* input_text_author, char* input_text_book_title, int
-	input_year, int input_pages, int input_price);
-void readingDataFromFile(FILE* name_of_file);
-double countAvgPriceOfBook(Book* first_node);
+} Book;
+
+/* single global head (defined in .c) */
+extern Book* start;
+
+/* I/O */
+int read_books_from_file(const char* path); /* returns number read, -1 on error */
 void print_list(const Book* head);
-void deleteElementFromList(Book** first_node, double input_avg_price);
-int numOfElementHigherThanAvgPriceInList(Book* first_node, double avg_price_of_book);
-void sortingListByBookTitle(Book* first_node, int num_of_element_in_list);
-int bookTitleStartingWith_P_K_L(const char* name_book_title);
-void removeNodeStartingWith_P_K_L(Book** first_list);
-void free_list(Book* head);
+
+/* basic operations */
+void add_book(const char* author, const char* title, int year, int pages, int price);
+double compute_average_price(void);
+void remove_below_average(double avg);
+void sort_books_by_title(void);
+void remove_books_starting_with_pkl(void);
+void free_list(void);

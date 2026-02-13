@@ -1,211 +1,186 @@
-#define _CRT_SECURE_NO_WARNINGS 
-#include <stdio.h> 
-#include <stdlib.h> 
-#include <string.h> 
-#include <stdbool.h> 
-#include "dynamicListForTask.h" 
-#define SIZE_OF_TEXT_FILE 40 
+#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include "dynamicListForTask.h"
+
 Book* start = NULL;
 
-void addElementToList(char* input_text_author, char* input_text_book_title, int
-    input_year, int input_pages, int input_price) {
-    Book* ptr = (Book*)malloc(sizeof(Book));
-    if (ptr == NULL) {
-        printf("Error");
-        return;
-    }
-    strcpy(ptr->author, input_text_author);
-    strcpy(ptr->book_title, input_text_book_title);
-    ptr->year = input_year;
-    ptr->pages = input_pages;
-    ptr->price = input_price;
-    ptr->next = NULL;
+/* Append a new book node to the end of the list */
+void add_book(const char* author, const char* title, int year, int pages, int price) {
+	Book* node = (Book*)malloc(sizeof(Book));
+	if (!node) {
+		fprintf(stderr, "Memory allocation failed in add_book\n");
+		return;
+	}
+	strncpy(node->author, author, sizeof(node->author) - 1);
+	node->author[sizeof(node->author) - 1] = '\0';
+	strncpy(node->book_title, title, sizeof(node->book_title) - 1);
+	node->book_title[sizeof(node->book_title) - 1] = '\0';
+	node->year = year;
+	node->pages = pages;
+	node->price = price;
+	node->next = NULL;
 
-    if (!start) {
-        start = ptr;
-    }
-    else {
-        Book* current = start;
-        while (current->next) {
-            current = current->next;
-        }
-        current->next = ptr;
-    }
+	if (!start) {
+		start = node;
+	} else {
+		Book* cur = start;
+		while (cur->next) cur = cur->next;
+		cur->next = node;
+	}
 }
 
-void readingDataFromFile(FILE* name_of_file) {
-    char tmp_author[100];
-    char tmp_book_title[100];
-    int tmp_year;
-    int tmp_pages;
-    int tmp_price;
+/* Read CSV-like file: Author, Book title, Year, Pages, Price per line
+   Returns number of successfully parsed lines; -1 if file open failed */
+int read_books_from_file(const char* path) {
+	FILE* f = fopen(path, "r");
+	if (!f) {
+		fprintf(stderr, "Error: cannot open file '%s'\n", path);
+		return -1;
+	}
 
-    for (int i = 0; i < SIZE_OF_TEXT_FILE; i++) {
-        if (fscanf(name_of_file, "%99[^,], %99[^,], %d, %d, %d",
-            tmp_author,
-            tmp_book_title,
-            &tmp_year,
-            &tmp_pages,
-            &tmp_price) == 5) {
-            addElementToList(tmp_author, tmp_book_title, tmp_year, tmp_pages,
-                tmp_price);
-        }
-    }
+	char line[512];
+	int count = 0;
+	while (fgets(line, sizeof(line), f)) {
+		/* trim newline */
+		char* p = line;
+		while (*p && (*p == ' ' || *p == '\t')) p++;
+		if (*p == '\0' || *p == '\n') continue;
+
+		char author[100], title[100];
+		int year, pages, price;
+		/* Use sscanf to parse; skip malformed lines */
+		int matched = sscanf(line, " %99[^,], %99[^,], %d, %d, %d", author, title, &year, &pages, &price);
+		if (matched == 5) {
+			add_book(author, title, year, pages, price);
+			count++;
+		} else {
+			fprintf(stderr, "Warning: skipping malformed line: %.80s\n", line);
+		}
+	}
+	fclose(f);
+	return count;
 }
 
-double countAvgPriceOfBook(Book* first_node) {
-    Book* node = NULL;
-    int sum_of_book_price = 0;
-    int num_of_elements = 0;
-    node = first_node;
-    while (node) {
-        sum_of_book_price += node->price;
-        num_of_elements++;
-        node = node->next;
-    }
-    return (double)sum_of_book_price / num_of_elements;
+/* Compute average price (returns 0.0 if list is empty) */
+double compute_average_price(void) {
+	Book* cur = start;
+	if (!cur) return 0.0;
+	long sum = 0;
+	int n = 0;
+	while (cur) {
+		sum += cur->price;
+		n++;
+		cur = cur->next;
+	}
+	return n ? ((double)sum) / n : 0.0;
 }
 
-void print_list(Book* first) {
-    Book* ptr = first;
-    printf("%-25s %-50s %-6s %-6s %-8s\n", "Author", "Book title", "Year", "Pages",
-        "Price");
-    printf("-------------------------------------------------------------------------------------------\n");
-    while (ptr) {
-        printf("%-25s %-50s %-6d %-6d %8d\n",
-            ptr->author,
-            ptr->book_title,
-            ptr->year,
-            ptr->pages,
-            ptr->price);
-        ptr = ptr->next;
-    }
+/* Remove nodes with price < avg. Uses pointer-to-pointer for head updates. */
+void remove_below_average(double avg) {
+	Book** curptr = &start;
+	while (*curptr) {
+		if ((*curptr)->price < avg) {
+			Book* tmp = *curptr;
+			*curptr = tmp->next;
+			free(tmp);
+		} else {
+			curptr = &((*curptr)->next);
+		}
+	}
 }
 
-void deleteElementFromList(Book** first_node, double input_avg_price) {
-    Book* tmp_list = *first_node, * prev = NULL;
-
-    while (tmp_list != NULL && tmp_list->price < input_avg_price) {
-        *first_node = tmp_list->next;
-        free(tmp_list);
-        tmp_list = *first_node;
-    }
-
-    if (tmp_list == NULL) {
-        return;
-    }
-
-    prev = tmp_list;
-    tmp_list = tmp_list->next;
-
-    while (tmp_list != NULL)
-    {
-        if (tmp_list->price < input_avg_price) {
-            prev->next = tmp_list->next;
-            free(tmp_list);
-            tmp_list = prev->next;
-        }
-        else {
-            prev = tmp_list;
-            tmp_list = tmp_list->next;
-        }
-    }
+/* Case-insensitive compare helper */
+static int ci_compare(const char* a, const char* b) {
+	while (*a && *b) {
+		char ca = (char)tolower((unsigned char)*a);
+		char cb = (char)tolower((unsigned char)*b);
+		if (ca != cb) return (ca < cb) ? -1 : 1;
+		a++; b++;
+	}
+	if (*a) return 1;
+	if (*b) return -1;
+	return 0;
 }
 
-int numOfElementHigherThanAvgPriceInList(Book* first_node, double avg_price_of_book) {
-    Book* ptr_tmp = first_node;
-    int count_higher_avg_price = 0;
-    while (ptr_tmp)
-    {
-        if (ptr_tmp->price > avg_price_of_book) {
-            count_higher_avg_price++;
-        }
-        ptr_tmp = ptr_tmp->next;
-    }
-    return count_higher_avg_price;
+/* Sort list by book_title (bubble sort swapping payload) */
+void sort_books_by_title(void) {
+	if (!start || !start->next) return;
+	int swapped;
+	do {
+		swapped = 0;
+		Book* cur = start;
+		while (cur && cur->next) {
+			if (ci_compare(cur->book_title, cur->next->book_title) > 0) {
+				/* swap payload */
+				char ta[100], tt[100];
+				int ty, tp, tpr;
+				strcpy(ta, cur->author);
+				strcpy(tt, cur->book_title);
+				ty = cur->year;
+				tp = cur->pages;
+				tpr = cur->price;
+
+				strcpy(cur->author, cur->next->author);
+				strcpy(cur->book_title, cur->next->book_title);
+				cur->year = cur->next->year;
+				cur->pages = cur->next->pages;
+				cur->price = cur->next->price;
+
+				strcpy(cur->next->author, ta);
+				strcpy(cur->next->book_title, tt);
+				cur->next->year = ty;
+				cur->next->pages = tp;
+				cur->next->price = tpr;
+
+				swapped = 1;
+			}
+			cur = cur->next;
+		}
+	} while (swapped);
 }
 
-void sortingListByBookTitle(Book* first_node, int num_of_element_in_list) {
-    Book* node = NULL;
-    char tmp_author[100];
-    char tmp_book_title[100];
-    int tmp_year;
-    int tmp_pages;
-    int tmp_price;
-    bool isswapped;
-    do
-    {
-        isswapped = false;
-        node = first_node;
-        while (node != NULL && node->next != NULL) {
-            if (strcmp(node->book_title, node->next->book_title) > 0) {
-
-                strcpy(tmp_author, node->author);
-                strcpy(tmp_book_title, node->book_title);
-                tmp_year = node->year;
-                tmp_pages = node->pages;
-                tmp_price = node->price;
-
-                strcpy(node->author, node->next->author);
-                strcpy(node->book_title, node->next->book_title);
-                node->year = node->next->year;
-                node->pages = node->next->pages;
-                node->price = node->next->price;
-
-                strcpy(node->next->author, tmp_author);
-                strcpy(node->next->book_title, tmp_book_title);
-                node->next->year = tmp_year;
-                node->next->pages = tmp_pages;
-                node->next->price = tmp_price;
-
-                isswapped = true;
-            }
-            node = node->next;
-        }
-    } while (isswapped);
-
+/* Check if title starts with 'P' or 'K' or 'L' (case-insensitive) */
+static int starts_with_pkl(const char* title) {
+	if (!title || !title[0]) return 0;
+	char c = (char)tolower((unsigned char)title[0]);
+	return (c == 'p' || c == 'k' || c == 'l');
 }
 
-int bookTitleStartingWith_P_K_L(char* name_book_title) {
-    char c = name_book_title[0];
-    return (c == 'P' || c == 'p' ||
-        c == 'K' || c == 'k' ||
-        c == 'L' || c == 'l');
+/* Remove nodes whose book_title starts with P/K/L (case-insensitive) */
+void remove_books_starting_with_pkl(void) {
+	Book** curptr = &start;
+	while (*curptr) {
+		if (starts_with_pkl((*curptr)->book_title)) {
+			Book* tmp = *curptr;
+			*curptr = tmp->next;
+			free(tmp);
+		} else {
+			curptr = &((*curptr)->next);
+		}
+	}
 }
 
-void removeNodeStartingWith_P_K_L(Book** first_list) {
-    Book* tmp_list = *first_list, * prev = NULL;
-
-    while (*first_list && bookTitleStartingWith_P_K_L((*first_list)->book_title)) {
-        tmp_list = *first_list;
-        *first_list = (*first_list)->next;
-        free(tmp_list);
-    }
-    prev = *first_list;
-    if (!prev) {
-        return;
-    }
-    tmp_list = prev->next;
-
-    while (tmp_list != NULL)
-    {
-        if (bookTitleStartingWith_P_K_L(tmp_list->book_title)) {
-            prev->next = tmp_list->next;
-            free(tmp_list);
-            tmp_list = prev->next;
-        }
-        else {
-
-            prev = tmp_list;
-            tmp_list = tmp_list->next;
-        }
-    }
+/* Print list with header */
+void print_list(const Book* head) {
+	printf("%-25s %-50s %-6s %-6s %-8s\n", "Author", "Book title", "Year", "Pages", "Price");
+	printf("-------------------------------------------------------------------------------------------\n");
+	const Book* cur = head;
+	while (cur) {
+		printf("%-25s %-50s %-6d %-6d %8d\n", cur->author, cur->book_title, cur->year, cur->pages, cur->price);
+		cur = cur->next;
+	}
 }
 
-void free_list(Book* first_node) {
-    while (first_node) {
-        Book* tmp_list = first_node;
-        first_node = first_node->next;
-        free(tmp_list);
-    }
+/* Free full list */
+void free_list(void) {
+	Book* cur = start;
+	while (cur) {
+		Book* tmp = cur;
+		cur = cur->next;
+		free(tmp);
+	}
+	start = NULL;
 }
