@@ -1,6 +1,17 @@
 #pragma once
 #include <stdio.h>
 
+/*
+ File format (plain-text):
+  - Optional comment lines starting with '#'
+  - Each record is one line:
+      Author, Book title, Year, Pages, Price
+  - Fields are separated by comma + optional space.
+  - Example:
+      George Orwell, 1984, 1949, 328, 250
+*/
+
+/* Book node */
 typedef struct Book {
 	char author[100];
 	char book_title[100];
@@ -15,6 +26,7 @@ extern Book* start;
 
 /* I/O */
 int read_books_from_file(const char* path); /* returns number read, -1 on error */
+int write_books_to_file(const char* path);  /* returns number written, -1 on error */
 void print_list(const Book* head);
 
 /* basic operations */

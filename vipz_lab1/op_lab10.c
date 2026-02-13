@@ -3,9 +3,10 @@
 #include "dynamicListForTask.h"
 
 int main(void) {
-	const char* path = "D:\\NYLP\\1k2s\\VIPZ\\lab1\\input_text.txt"; /* adapt to your environment */
+	const char* path_in = "D:\\NYLP\\1k2s\\VIPZ\\lab1\\input_text.txt"; /* adapt to your environment */
+	const char* path_out = "D:\\NYLP\\1k2s\\VIPZ\\lab1\\output_text.txt"; /* output path */
 
-	int read = read_books_from_file(path);
+	int read = read_books_from_file(path_in);
 	if (read < 0) {
 		return 1; /* file open error already printed by reader */
 	}
@@ -35,6 +36,14 @@ int main(void) {
 	remove_books_starting_with_pkl();
 	printf("\n\nList after removing titles starting with P/K/L:\n\n");
 	print_list(start);
+
+	/* Write final list to output file */
+	int written = write_books_to_file(path_out);
+	if (written >= 0) {
+		printf("\nWrote %d records to '%s'\n", written, path_out);
+	} else {
+		fprintf(stderr, "Failed to write output file.\n");
+	}
 
 	free_list();
 	return 0;

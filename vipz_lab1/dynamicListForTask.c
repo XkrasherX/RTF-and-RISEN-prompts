@@ -33,6 +33,7 @@ void add_book(const char* author, const char* title, int year, int pages, int pr
 }
 
 /* Read CSV-like file: Author, Book title, Year, Pages, Price per line
+   Comments beginning with '#' are ignored.
    Returns number of successfully parsed lines; -1 if file open failed */
 int read_books_from_file(const char* path) {
 	FILE* f = fopen(path, "r");
@@ -44,10 +45,11 @@ int read_books_from_file(const char* path) {
 	char line[512];
 	int count = 0;
 	while (fgets(line, sizeof(line), f)) {
-		/* trim newline */
+		/* find first non-space */
 		char* p = line;
-		while (*p && (*p == ' ' || *p == '\t')) p++;
-		if (*p == '\0' || *p == '\n') continue;
+		while (*p && isspace((unsigned char)*p)) p++;
+		if (*p == '\0' || *p == '\n') continue;            /* blank line */
+		if (*p == '#') continue;                          /* comment line */
 
 		char author[100], title[100];
 		int year, pages, price;
@@ -57,11 +59,45 @@ int read_books_from_file(const char* path) {
 			add_book(author, title, year, pages, price);
 			count++;
 		} else {
-			fprintf(stderr, "Warning: skipping malformed line: %.80s\n", line);
+			/* Trim newline for warning */
+			char warn[128];
+			strncpy(warn, line, sizeof(warn) - 1);
+			warn[sizeof(warn) - 1] = '\0';
+			char* nl = strchr(warn, '\n'); if (nl) *nl = '\0';
+			fprintf(stderr, "Warning: skipping malformed line: %.120s\n", warn);
 		}
 	}
 	fclose(f);
 	return count;
+}
+
+/* Write list to file using the same CSV format and a small header.
+   Returns number written; -1 on error. */
+int write_books_to_file(const char* path) {
+	FILE* f = fopen(path, "w");
+	if (!f) {
+		fprintf(stderr, "Error: cannot open output file '%s' for writing\n", path);
+		return -1;
+	}
+	/* Header describing format */
+	fprintf(f, "# File format: Author, Book title, Year, Pages, Price\n");
+	fprintf(f, "# Each record on its own line. Lines starting with '#' are comments.\n");
+
+	int written = 0;
+	Book* cur = start;
+	while (cur) {
+		/* write exactly same order used for reading */
+		fprintf(f, "%s, %s, %d, %d, %d\n",
+			cur->author,
+			cur->book_title,
+			cur->year,
+			cur->pages,
+			cur->price);
+		written++;
+		cur = cur->next;
+	}
+	fclose(f);
+	return written;
 }
 
 /* Compute average price (returns 0.0 if list is empty) */
