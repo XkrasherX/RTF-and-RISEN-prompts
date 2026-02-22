@@ -7,7 +7,41 @@
 
 Book* start = NULL;
 
-/* Append node to list pointed by head (head can be &start or another list) */
+/* helper: trim leading/trailing whitespace */
+static void trim(char* s) {
+    if (!s) return;
+    char* end;
+    while (*s && (*s == ' ' || *s == '\t' || *s == '\r' || *s == '\n')) s++;
+    /* shift left if needed */
+    char* dst = s;
+    if (dst != s) memmove(dst, s, strlen(s) + 1);
+    /* now do trailing */
+    end = s + strlen(s) - 1;
+    while (end >= s && (*end == ' ' || *end == '\t' || *end == '\r' || *end == '\n')) {
+        *end = '\0';
+        --end;
+    }
+}
+
+/* helper: remove surrounding quotes if present, then trim */
+static void strip_quotes_and_trim(char* s) {
+    if (!s) return;
+    trim(s);
+    size_t len = strlen(s);
+    if (len >= 2 && s[0] == '\"' && s[len - 1] == '\"') {
+        /* move inner content */
+        memmove(s, s + 1, len - 2);
+        s[len - 2] = '\0';
+        trim(s);
+    }
+}
+
+/* helper: replace underscores with spaces */
+static void underscores_to_spaces(char* s) {
+    if (!s) return;
+    for (; *s; ++s) if (*s == '_') *s = ' ';
+}
+
 void addElementToList(Book** head, const char* input_text_author, const char* input_text_book_title, int input_year, int input_pages, int input_price) {
     Book* ptr = (Book*)malloc(sizeof(Book));
     if (ptr == NULL) {
@@ -37,7 +71,6 @@ void addElementToList(Book** head, const char* input_text_author, const char* in
     }
 }
 
-/* Read until fscanf fails; append into provided list */
 void readingDataFromFile(Book** head, FILE* name_of_file) {
     char tmp_author[100];
     char tmp_book_title[200];
@@ -51,6 +84,8 @@ void readingDataFromFile(Book** head, FILE* name_of_file) {
         &tmp_year,
         &tmp_pages,
         &tmp_price) == 5) {
+        trim(tmp_author);
+        trim(tmp_book_title);
         addElementToList(head, tmp_author, tmp_book_title, tmp_year, tmp_pages, tmp_price);
     }
 }
@@ -85,6 +120,7 @@ void print_list(const Book* first) {
 
 /* Delete nodes with price <= input_avg_price so only strictly greater remain */
 void deleteElementFromList(Book** first_node, double input_avg_price) {
+    if (!first_node) return;
     Book* tmp_list = *first_node;
     Book* prev = NULL;
 
@@ -178,6 +214,7 @@ int bookTitleStartingWith_P_K_L(const char* name_book_title) {
 }
 
 void removeNodeStartingWith_P_K_L(Book** first_list) {
+    if (!first_list) return;
     Book* tmp_list = *first_list;
     Book* prev = NULL;
 
@@ -213,16 +250,92 @@ void free_list(Book* first_node) {
     }
 }
 
-/* New function: read number of books and then N lines:
-   Each line format: Author Title Year Pages Price
-   Use underscores for spaces inside Author/Title (they will be converted to spaces).
+/* Attempts to parse a line into author, title and three ints.
+   Accepts:
+   - comma-separated: Author, Title, Year, Pages, Price
+   - quoted: "Author Name" "Title Name" Year Pages Price
+   - tokenized: Author_Title Title_With_Underscores Year Pages Price
+   Returns 1 on success, 0 on failure.
 */
+static int parse_book_line(const char* line_in, char* out_author, size_t auth_sz, char* out_title, size_t title_sz, int* out_year, int* out_pages, int* out_price) {
+    if (!line_in || !out_author || !out_title) return 0;
+    char buf[512];
+    strncpy(buf, line_in, sizeof(buf) - 1);
+    buf[sizeof(buf) - 1] = '\0';
+    /* If line contains commas, split by comma */
+    if (strchr(buf, ',') != NULL) {
+        char* saveptr = NULL;
+        char* tok = strtok_s(buf, ",", &saveptr);
+        if (!tok) return 0;
+        trim(tok);
+        strncpy(out_author, tok, auth_sz - 1); out_author[auth_sz - 1] = '\0';
+        tok = strtok_s(NULL, ",", &saveptr);
+        if (!tok) return 0;
+        trim(tok);
+        strncpy(out_title, tok, title_sz - 1); out_title[title_sz - 1] = '\0';
+        tok = strtok_s(NULL, ",", &saveptr);
+        if (!tok) return 0;
+        trim(tok); *out_year = atoi(tok);
+        tok = strtok_s(NULL, ",", &saveptr);
+        if (!tok) return 0;
+        trim(tok); *out_pages = atoi(tok);
+        tok = strtok_s(NULL, ",", &saveptr);
+        if (!tok) return 0;
+        trim(tok); *out_price = atoi(tok);
+        strip_quotes_and_trim(out_author);
+        strip_quotes_and_trim(out_title);
+        return 1;
+    }
+
+    /* Try quoted parsing: "Author" "Title" year pages price */
+    const char* p = buf;
+    while (*p && (*p == ' ' || *p == '\t')) ++p;
+    if (*p == '\"') {
+        ++p;
+        const char* q = strchr(p, '\"');
+        if (!q) return 0;
+        size_t len = (size_t)(q - p);
+        if (len >= auth_sz) len = auth_sz - 1;
+        strncpy(out_author, p, len); out_author[len] = '\0';
+        p = q + 1;
+        /* skip whitespace */
+        while (*p && (*p == ' ' || *p == '\t')) ++p;
+        if (*p == '\"') {
+            ++p;
+            q = strchr(p, '\"');
+            if (!q) return 0;
+            len = (size_t)(q - p);
+            if (len >= title_sz) len = title_sz - 1;
+            strncpy(out_title, p, len); out_title[len] = '\0';
+            p = q + 1;
+            /* now parse ints from p */
+            if (sscanf_s(p, "%d %d %d", out_year, out_pages, out_price) == 3) {
+                return 1;
+            }
+            return 0;
+        }
+    }
+
+    /* Fallback tokenized parsing: author title year pages price (single-token author/title; underscores allowed) */
+    char a[100] = {0}, t[200] = {0};
+    int y = 0, pg = 0, pr = 0;
+    if (sscanf_s(buf, "%99s %199s %d %d %d", a, (unsigned)_countof(a), t, (unsigned)_countof(t), &y, &pg, &pr) == 5) {
+        strncpy(out_author, a, auth_sz - 1); out_author[auth_sz - 1] = '\0';
+        strncpy(out_title, t, title_sz - 1); out_title[title_sz - 1] = '\0';
+        underscores_to_spaces(out_author);
+        underscores_to_spaces(out_title);
+        *out_year = y; *out_pages = pg; *out_price = pr;
+        return 1;
+    }
+
+    return 0;
+}
+
 void inputBooksFromUser(Book** head) {
     if (!head) return;
     int n = 0;
     printf("Enter number of books to input: ");
     if (scanf("%d", &n) != 1 || n <= 0) {
-        /* consume rest of line and return */
         int ch;
         while ((ch = getchar()) != '\n' && ch != EOF) {}
         printf("No valid number entered.\n");
@@ -233,30 +346,33 @@ void inputBooksFromUser(Book** head) {
     while ((ch = getchar()) != '\n' && ch != EOF) {}
 
     char line[512];
-    for (int i = 0; i < n; i++) {
-        printf("Enter book #%d as: Author Title Year Pages Price\n", i + 1);
-        printf("  (use underscores instead of spaces in Author/Title):\n> ");
+    for (int i = 0; i < n; ) {
+        printf("Enter book #%d (formats accepted):\n", i + 1);
+        printf("  1) Comma-separated: Author, Title, Year, Pages, Price\n");
+        printf("  2) Quoted: \"Author Name\" \"Book Title\" Year Pages Price\n");
+        printf("  3) Tokenized: Author_Title Title_With_Underscores Year Pages Price\n> ");
         if (!fgets(line, sizeof(line), stdin)) {
             printf("Input error.\n");
             break;
         }
-        /* Trim trailing newline */
+        /* trim newline */
         size_t len = strlen(line);
         if (len && line[len - 1] == '\n') line[len - 1] = '\0';
 
         char author[100] = {0};
         char title[200] = {0};
         int year = 0, pages = 0, price = 0;
-        int scanned = sscanf(line, "%99s %199s %d %d %d", author, title, &year, &pages, &price);
-        if (scanned != 5) {
-            printf("Invalid format. Expected: Author Title Year Pages Price\n");
-            i--; /* allow retry */
-            continue;
+        if (!parse_book_line(line, author, sizeof(author), title, sizeof(title), &year, &pages, &price)) {
+            printf("Invalid format. Please try again.\n");
+            continue; /* do not increment i; allow retry */
         }
-        /* convert underscores to spaces */
-        for (char* p = author; *p; ++p) if (*p == '_') *p = ' ';
-        for (char* p = title; *p; ++p) if (*p == '_') *p = ' ';
+        /* final trimming and normalization */
+        strip_quotes_and_trim(author);
+        strip_quotes_and_trim(title);
+        underscores_to_spaces(author);
+        underscores_to_spaces(title);
 
         addElementToList(head, author, title, year, pages, price);
+        ++i;
     }
 }
