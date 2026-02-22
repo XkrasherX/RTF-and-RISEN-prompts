@@ -36,3 +36,6 @@ void remove_below_average(double avg);
 void sort_books_by_title(void);
 void remove_books_starting_with_pkl(void);
 void free_list(void);
+
+/* interactive user input: user enters count then N book lines */
+void input_books_from_user(void);

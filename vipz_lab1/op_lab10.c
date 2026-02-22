@@ -13,10 +13,9 @@ int main(void) {
 	printf("Read %d records from file.\n\nCurrent list:\n\n", read);
 	print_list(start);
 
-	/* Add 2 elements (as required) */
-	add_book("Chemerys Danylo", "My Own Book", 2025, 13, 357);
-	add_book("FChemerys Danylo", "PMy Own Book", 2025, 13, 398);
-	printf("\n\nList after adding 2 elements:\n\n");
+	/* Interactive user input: user may add N books */
+	input_books_from_user();
+	printf("\n\nList after user input (if any):\n\n");
 	print_list(start);
 
 	/* Compute average including the newly added ones */
