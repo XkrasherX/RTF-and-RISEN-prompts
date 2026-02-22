@@ -3,11 +3,7 @@
 #include "dynamicListForTask.h" 
 
 int main(void) {
-	char name_of_author[100] = "FChemerys Danylo";
-	char name_of_book[100] = "PMy Own Book";
-	int year_of_book = 2025;
-	int num_of_pages_in_book = 13;
-	int num_of_book_price = 398;
+	
 	FILE* input_text_file = fopen("D:\\NYLP\\1k2s\\VIPZ\\lab1\\input_text.txt", "r");
 	if (input_text_file == NULL) {
 		printf("Error opening file\n");
