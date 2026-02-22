@@ -27,10 +27,9 @@ int main(void) {
 	printf("\n\nList after removing books with price <= avg: \n\n");
 	print_list(start);
 
-	/* add two elements (use the new API) */
-	addElementToList(&start, "Chemerys Danylo", "My Own Book", 2025, 13, 357);
-	addElementToList(&start, name_of_author, name_of_book, year_of_book, num_of_pages_in_book, num_of_book_price);
-	printf("\n\nList after adding 2 elements: \n\n");
+	/* Let user input N books (replaces previous hard-coded adds) */
+	inputBooksFromUser(&start);
+	printf("\n\nList after adding user-input books: \n\n");
 	print_list(start);
 
 	/* sort remaining list alphabetically by title (only nodes left in list are sorted) */

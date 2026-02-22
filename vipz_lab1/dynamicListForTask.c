@@ -212,3 +212,51 @@ void free_list(Book* first_node) {
         free(tmp_list);
     }
 }
+
+/* New function: read number of books and then N lines:
+   Each line format: Author Title Year Pages Price
+   Use underscores for spaces inside Author/Title (they will be converted to spaces).
+*/
+void inputBooksFromUser(Book** head) {
+    if (!head) return;
+    int n = 0;
+    printf("Enter number of books to input: ");
+    if (scanf("%d", &n) != 1 || n <= 0) {
+        /* consume rest of line and return */
+        int ch;
+        while ((ch = getchar()) != '\n' && ch != EOF) {}
+        printf("No valid number entered.\n");
+        return;
+    }
+    /* consume leftover newline */
+    int ch;
+    while ((ch = getchar()) != '\n' && ch != EOF) {}
+
+    char line[512];
+    for (int i = 0; i < n; i++) {
+        printf("Enter book #%d as: Author Title Year Pages Price\n", i + 1);
+        printf("  (use underscores instead of spaces in Author/Title):\n> ");
+        if (!fgets(line, sizeof(line), stdin)) {
+            printf("Input error.\n");
+            break;
+        }
+        /* Trim trailing newline */
+        size_t len = strlen(line);
+        if (len && line[len - 1] == '\n') line[len - 1] = '\0';
+
+        char author[100] = {0};
+        char title[200] = {0};
+        int year = 0, pages = 0, price = 0;
+        int scanned = sscanf(line, "%99s %199s %d %d %d", author, title, &year, &pages, &price);
+        if (scanned != 5) {
+            printf("Invalid format. Expected: Author Title Year Pages Price\n");
+            i--; /* allow retry */
+            continue;
+        }
+        /* convert underscores to spaces */
+        for (char* p = author; *p; ++p) if (*p == '_') *p = ' ';
+        for (char* p = title; *p; ++p) if (*p == '_') *p = ' ';
+
+        addElementToList(head, author, title, year, pages, price);
+    }
+}

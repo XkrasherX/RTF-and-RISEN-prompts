@@ -17,6 +17,9 @@ extern Book* start;
 void addElementToList(Book** head, const char* input_text_author, const char* input_text_book_title, int input_year, int input_pages, int input_price);
 void readingDataFromFile(Book** head, FILE* name_of_file);
 
+/* New: read N books from user */
+void inputBooksFromUser(Book** head);
+
 double countAvgPriceOfBook(const Book* first_node);
 void print_list(const Book* head);
 void deleteElementFromList(Book** first_node, double input_avg_price);
