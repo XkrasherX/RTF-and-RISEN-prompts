@@ -36,15 +36,19 @@ To ensure a smooth workflow, please follow these steps:
 Fork the repository to your GitHub account, then clone it locally:
 ```bash
 git clone [https://github.com/YOUR_USERNAME/RTF-and-RISEN-prompts.git](https://github.com/YOUR_USERNAME/RTF-and-RISEN-prompts.git)
+```
 ### 2\. Create a Branch
 
 Create a branch for your changes. Use clear, descriptive names:
 
-```bash
-# For a new prompt
-git checkout -b prompt/marketing-strategy
 
-# For a bug fix or typo
+#### For a new prompt:
+```bash
+git checkout -b prompt/marketing-strategy
+```
+
+#### For a bug fix or typo:
+```bash
 git checkout -b fix/typo-readme
 ```
 
