@@ -111,8 +111,8 @@ Before hitting that submit button, please verify that your PR meets these criter
 
 -----
 
-\<p align="center"\>
-Thank you for your time and effort\! Happy prompting\! 🤖
-\</p\>
+<p align="center">
+Thank you for your time and effort! Happy prompting! 🤖
+</p>
 
 ```
