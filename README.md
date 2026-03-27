@@ -89,12 +89,6 @@ We are always looking for new, creative prompts\!
 
 -----
 
-## 📜 License
-
-This project is licensed under the MIT License - see the [LICENSE](https://www.google.com/search?q=LICENSE) file for details.
-
------
-
 <p align="center"\>
 Built with 🤖 for the AI Community. 
 <br><b>If this helps you, please leave a ⭐ to support the project!</b\>
