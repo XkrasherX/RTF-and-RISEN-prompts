@@ -115,4 +115,4 @@ Before hitting that submit button, please verify that your PR meets these criter
 Thank you for your time and effort! Happy prompting! 🤖
 </p>
 
-```
+-----
