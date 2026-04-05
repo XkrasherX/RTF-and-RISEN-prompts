@@ -3,13 +3,35 @@
 #include "dynamicListForTask.h"
 
 int main(void) {
-	const char* path_in = "D:\\NYLP\\1k2s\\VIPZ\\lab1\\input_text.txt"; /* adapt to your environment */
-	const char* path_out = "D:\\NYLP\\1k2s\\VIPZ\\lab1\\output_text.txt"; /* output path */
+	const char* default_path_in = "D:\\NYLP\\1k2s\\VIPZ\\lab1\\input_text.txt";
+	const char* path_out = "D:\\NYLP\\1k2s\\VIPZ\\lab1\\output_text.txt";
 
-	int read = read_books_from_file(path_in);
-	if (read < 0) {
-		return 1; /* file open error already printed by reader */
+	char path_buffer[512];
+	int read;
+
+	/* First, let's try the default path */
+	read = read_books_from_file(default_path_in);
+
+	/* If the file doesn't open - try a different path */
+	while (read < 0) {
+		printf("\nDefault file path not found:\n%s\n", default_path_in);
+		printf("Enter another file path or press ENTER to retry default: ");
+
+		if (!fgets(path_buffer, sizeof(path_buffer), stdin))
+			return 1;
+
+		/* remove the newline character */
+		path_buffer[strcspn(path_buffer, "\r\n")] = 0;
+
+		/* If the user simply pressed ENTER, we try the default again */
+		if (path_buffer[0] == '\0') {
+			read = read_books_from_file(default_path_in);
+		}
+		else {
+			read = read_books_from_file(path_buffer);
+		}
 	}
+
 	printf("Read %d records from file.\n\nCurrent list:\n\n", read);
 	print_list(start);
 
